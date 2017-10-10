@@ -1,5 +1,5 @@
-#ifndef _CYCL_COORDINATOR_HH_
-#define _CYCL_COORDINATOR_HH_
+#ifndef _RR_COORDINATOR_HH_
+#define _RR_COORDINATOR_HH_
 
 #include "Coordinator.hh"
 
@@ -18,5 +18,5 @@ class RRCoordinator : public Coordinator {
     RRCoordinator(Config* c);
 };
 
-#endif //_CYCL_COORDINATOR_HH_
+#endif //_RR_COORDINATOR_HH_
 

@@ -46,6 +46,7 @@ class ECPipeInputStream {
 
     redisContext* _pipePullCtx;
     vector<redisContext*> _cyclPullCtx;
+    vector<redisContext*> _RRPullCtx;
     
     mutex _reader2SenderMtx;
     condition_variable _reader2SenderCondVar;
@@ -57,6 +58,7 @@ class ECPipeInputStream {
 
     void pipeCollector(); 
     void cyclCollector(); 
+    void RRCollector(); 
     void dataCollector(); 
 
   public :

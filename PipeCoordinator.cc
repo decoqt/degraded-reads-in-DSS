@@ -224,6 +224,8 @@ void PipeCoordinator::requestHandler() {
       if (_conf -> _ECPipePolicy == "basic") {
         rReply = (redisReply*)redisCommand(_selfCtx, "RPUSH %s %b", filename.c_str(), &(stripe.back().first), 4);
 //        freeReplyObject(rReply);
+      } else if (_conf -> _ECPipePolicy == "crr") {
+	cout<<"RR to do "<<endl;
       } else {
         for (int i = 0; i < stripe.size() - 1; i ++) {
           redisAppendCommand(_selfCtx, "RPUSH %s %b", filename.c_str(), &(stripe[i].first), 4);

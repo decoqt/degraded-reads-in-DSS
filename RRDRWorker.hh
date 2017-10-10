@@ -1,5 +1,5 @@
-#ifndef _CYCL_DR_WORKER_HH_
-#define _CYCL_DR_WORKER_HH_
+#ifndef _RR_DR_WORKER_HH_
+#define _RR_DR_WORKER_HH_
 
 #include <queue>
 

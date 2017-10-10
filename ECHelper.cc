@@ -15,6 +15,7 @@
 #include "ConvDRWorker.hh"
 #include "CyclDRWorker.hh"
 #include "DRWorker.hh"
+#include "RRDRWorker.hh"
 #include "PPRDRWorker.hh"
 #include "PPRPullDRWorker.hh"
 #include "PipeDRWorker.hh"
@@ -35,6 +36,7 @@ int main(int argc, char** argv) {
       cout << "ECHelper: starting ECPipe helper" << endl;
       if (conf -> _ECPipePolicy == "cyclic") drWorkers[i] = new CyclDRWorker(conf);
       if (conf -> _ECPipePolicy == "basic") drWorkers[i] = new PipeDRWorker(conf);
+      if (conf -> _ECPipePolicy == "crr") drWorkers[i] = new RRDRWorker(conf);
     } else if (conf -> _DRPolicy == "ppr") {
       drWorkers[i] = new PPRPullDRWorker(conf);
     } else if (conf -> _DRPolicy == "conv") {

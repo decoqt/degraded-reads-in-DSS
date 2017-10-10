@@ -209,16 +209,38 @@ bool ECPipeInputStream::sendToCoordinator() {
       _cyclPullCtx.push_back(findCtx(ip));
       freeReplyObject(rReply);
     }
+  } else if (_conf -> _DRPolicy == "ecpipe" && _conf -> _ECPipePolicy == "crr") {
+    unsigned int ip;
+    for (int i = 0; i < _conf -> _ecK - 1; i ++) {
+      redisAppendCommand(_coordinatorCtx, "BLPOP %s 0", _lostFileName.c_str());
+    }
+
+    redisGetReply(_coordinatorCtx, (void**)&rReply);
+    freeReplyObject(rReply);
+
+
+    for (int i = 0; i < _conf -> _ecK - 1; i ++) {
+      redisGetReply(_coordinatorCtx, (void**)&rReply);
+      memcpy((char*)&ip, rReply -> element[1] -> str, 4);
+      _cyclPullCtx.push_back(findCtx(ip));
+      freeReplyObject(rReply);
+    }
   }
+  
   return true;
 }
 
 void ECPipeInputStream::dataCollector() {
   if (_DRPolicy == "ecpipe" && _ECPipePolicy == "cyclic") {
     cyclCollector();
+  } else if (_DRPolicy == "ecpipe" && _ECPipePolicy == "crr") {
+    RRCollector();
   } else {
     pipeCollector();
   }
+}
+
+void ECPipeInputStream::RRCollector() {
 }
 
 void ECPipeInputStream::cyclCollector() {
