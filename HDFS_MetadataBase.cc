@@ -13,8 +13,12 @@ HDFS_MetadataBase::HDFS_MetadataBase(Config* conf, RSUtil* rsu) :
   set<string> blks;
   map<string, set<string>> blk2Stripe;
   map<string, vector<string>> recoveree;
+  
+  map<string, set<string>> RRblk2Stripe;
+  map<string, vector<string>> RRrecoveree;
 
   _blk2Stripe.clear();
+  _RRblk2Stripe.clear();
 
   if ((dir = opendir(stripeStore.c_str())) != NULL) {
     while ((ent = readdir(dir)) != NULL) {
@@ -43,6 +47,7 @@ HDFS_MetadataBase::HDFS_MetadataBase(Config* conf, RSUtil* rsu) :
 
       // blks used for recovery
       vector<string> recoveredBlks;
+      vector<string> RRrecoveredBlks;
       int bidInStripe;
       while (true) {
         pos = rawStripe.find(':', start);
@@ -53,6 +58,14 @@ HDFS_MetadataBase::HDFS_MetadataBase(Config* conf, RSUtil* rsu) :
           << " bName: " << bName << endl;
 
         if (bName != blkName) {
+	    
+            RRblk2Stripe[blkName].insert(bName);
+            RRrecoveredBlks.push_back(bName);
+        //    cout << "here3" << endl;
+            if (RRrecoveree.find(bName) == RRrecoveree.end()) 
+              RRrecoveree[bName] = vector<string>();
+        //    cout << "here3.5 " << recoveree[bName].size() << endl;
+            RRrecoveree[bName].push_back(blkName);
         //  cout << "here" << endl;
           if (recoveredBlks.size() < _conf -> _ecK) {
             blk2Stripe[blkName].insert(bName);
@@ -79,7 +92,16 @@ HDFS_MetadataBase::HDFS_MetadataBase(Config* conf, RSUtil* rsu) :
       for (int i = 0; i < recoveredBlks.size(); i ++) {
         _coefficient[blkName].insert({recoveredBlks[i], coef[i]});
       }
+      for (int i = 0; i < RRrecoveredBlks.size(); i ++) {
+        _RRcoefficient[blkName].insert({recoveredBlks[i], 1});
+      }
       if (METADATA_BASE_DEBUG) {
+        for (auto it : RRblk2Stripe) {
+          cout << "add" << it.first << ": ";
+          for (auto i : it.second) cout << " " << i;
+          cout << endl;
+        }
+
         for (auto it : blk2Stripe) {
           cout << it.first << ": ";
           for (auto i : it.second) cout << " " << i;
@@ -141,11 +163,26 @@ HDFS_MetadataBase::HDFS_MetadataBase(Config* conf, RSUtil* rsu) :
         cout << "getting blkName: " << blkName << " it: " << it << endl;
         _blk2Stripe[it].insert({holderIP, blkName});
       }
+      for (auto &it : RRrecoveree[blkName]) {
+        cout << "getting blkName: " << blkName << " it: " << it << endl;
+        _RRblk2Stripe[it].insert({holderIP, blkName});
+      }
       blks.erase(blkName);
 	cout <<"HDFS_MetadataBase: erase"<<endl;
       if (blks.empty()) break;
     }
   }
+}
+
+vector<pair<unsigned int, string>> HDFS_MetadataBase::getRRStripeBlks(const string& blkName, unsigned int requestorIP) {
+  cout << "HDFS_MetadataBase::getRRStripeBlks()" << blkName << endl;
+  set<pair<unsigned int, string>> retVal = _RRblk2Stripe[blkName];
+  vector<pair<unsigned int, string>> ret = vector<pair<unsigned int, string>>(retVal.begin(), retVal.end());
+  for(int i=0; i<ret.size(); i++) {
+          cout<<"RR ip = "<<ret[i].first<<" ";
+          cout<<"block = "<<ret[i].second<<endl;
+  }
+  return ret;
 }
 
 vector<pair<unsigned int, string>> HDFS_MetadataBase::getStripeBlks(const string& blkName, unsigned int requestorIP) {
