@@ -30,6 +30,7 @@ class MetadataBase {
     ~MetadataBase(){};
     // <ip, blk> pair
     virtual vector<pair<unsigned int, string>> getStripeBlks(const string& blkName, unsigned int requestorIP) = 0;
+    virtual vector<pair<unsigned int, string>> getRRStripeBlks(const string& blkName, unsigned int requestorIP) = 0;
     virtual map<string, int> getCoefficient(const string& blkName) = 0;
 };
 

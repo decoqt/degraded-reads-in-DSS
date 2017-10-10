@@ -64,8 +64,12 @@ void PipeCoordinator::requestHandler() {
        * f: lost file name (4Byte lenght + length) start pos 20, 24
        * g: corresponding filename in local start pos ?, ? + 4
        */
-      vector<pair<unsigned int, string>> stripe = 
-        _metadataBase -> getStripeBlks(filename, requestorIP);
+      vector<pair<unsigned int, string>> stripe;
+      if (_conf -> _ECPipePolicy == "crr") {
+	stripe = _metadataBase -> getRRStripeBlks(filename, requestorIP);
+	}else {
+      	stripe = _metadataBase -> getStripeBlks(filename, requestorIP);
+	}
 
       if (_conf -> _pathSelectionEnabled) {
           cout << "checkpoint 1" << endl;
@@ -226,6 +230,13 @@ void PipeCoordinator::requestHandler() {
 //        freeReplyObject(rReply);
       } else if (_conf -> _ECPipePolicy == "crr") {
 	cout<<"RR to do "<<endl;
+        for (int i = 0; i < stripe.size() - 1; i ++) {
+          redisAppendCommand(_selfCtx, "RPUSH %s %b", filename.c_str(), &(stripe[i].first), 4);
+        }
+        for (int i = 0; i < stripe.size() - 1; i ++) {
+          redisGetReply(_selfCtx, (void**)&rReply);
+//          freeReplyObject(rReply);
+        }
       } else {
         for (int i = 0; i < stripe.size() - 1; i ++) {
           redisAppendCommand(_selfCtx, "RPUSH %s %b", filename.c_str(), &(stripe[i].first), 4);

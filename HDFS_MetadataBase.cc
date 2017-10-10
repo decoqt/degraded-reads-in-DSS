@@ -61,16 +61,16 @@ HDFS_MetadataBase::HDFS_MetadataBase(Config* conf, RSUtil* rsu) :
 	    
             RRblk2Stripe[blkName].insert(bName);
             RRrecoveredBlks.push_back(bName);
-        //    cout << "here3" << endl;
+            cout << "here3" << endl;
             if (RRrecoveree.find(bName) == RRrecoveree.end()) 
               RRrecoveree[bName] = vector<string>();
-        //    cout << "here3.5 " << recoveree[bName].size() << endl;
+            cout << "here3.5 " << recoveree[bName].size() << endl;
             RRrecoveree[bName].push_back(blkName);
-        //  cout << "here" << endl;
+          cout << "here" << endl;
           if (recoveredBlks.size() < _conf -> _ecK) {
             blk2Stripe[blkName].insert(bName);
             recoveredBlks.push_back(bName);
-        //    cout << "here3" << endl;
+            cout << "herae3" << endl;
             if (recoveree.find(bName) == recoveree.end()) 
               recoveree[bName] = vector<string>();
         //    cout << "here3.5 " << recoveree[bName].size() << endl;
@@ -93,7 +93,7 @@ HDFS_MetadataBase::HDFS_MetadataBase(Config* conf, RSUtil* rsu) :
         _coefficient[blkName].insert({recoveredBlks[i], coef[i]});
       }
       for (int i = 0; i < RRrecoveredBlks.size(); i ++) {
-        _RRcoefficient[blkName].insert({recoveredBlks[i], 1});
+        _RRcoefficient[blkName].insert({RRrecoveredBlks[i], 1});
       }
       if (METADATA_BASE_DEBUG) {
         for (auto it : RRblk2Stripe) {

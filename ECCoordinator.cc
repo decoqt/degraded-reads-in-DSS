@@ -29,9 +29,6 @@ int main(int argc, char** argv) {
     if (conf -> _ECPipePolicy == "cyclic") {
 	coord = new CyclCoordinator(conf);
     	cout << "PipeCoordinator: starting cycle coordinator" << endl;
-    } else if ( conf -> _ECPipePolicy == "crr") {
-	coord = new RRCoordinator(conf);
-    	cout << "RRCoordinator: starting RR coordinator" << endl;
     } else {
 	coord = new PipeCoordinator(conf);
     	cout << "PipeCoordinator: starting Pipe coordinator" << endl;

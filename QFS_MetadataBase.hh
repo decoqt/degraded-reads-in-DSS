@@ -26,6 +26,7 @@ class QFS_MetadataBase : public MetadataBase{
     ~QFS_MetadataBase(){};
     // <ip, blk> pair
     vector<pair<unsigned int, string>> getStripeBlks(const string& blkName, unsigned int requestorIP);
+    vector<pair<unsigned int, string>> getRRStripeBlks(const string& blkName, unsigned int requestorIP);
     map<string, int> getCoefficient(const string& blkName);
 };
 

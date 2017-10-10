@@ -137,6 +137,15 @@ void QFS_MetadataBase::ProcessMetadata(){
   }
 }
 
+vector<pair<unsigned int, string>> QFS_MetadataBase::getRRStripeBlks(const string& blkName, unsigned int requestorIP) {
+
+  unique_lock<mutex> _lock(_blkLock_m);
+  _blkLock.wait(_lock, [this, blkName]{return _blk2Stripe.find(blkName) != _blk2Stripe.end();});
+
+  list<pair<unsigned int, string>> retVal = _blk2Stripe[blkName];
+  return vector<pair<unsigned int, string>>(retVal.begin(), retVal.end());
+}
+
 vector<pair<unsigned int, string>> QFS_MetadataBase::getStripeBlks(const string& blkName, unsigned int requestorIP) {
   // TODO: currently, we assume that all metadata are collected during
   // initialization..  However, we should know that this may not be 100%

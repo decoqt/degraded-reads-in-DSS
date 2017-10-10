@@ -91,9 +91,10 @@ void RRDRWorker::sender(const string& filename, redisContext* rc) {
   redisReply* rReply;
   cout << "sender() start" << endl;
   struct timeval tv1, tv2;
+  
 
-  int lastGroupCnt = _packetCnt % (_ecK - 1), lastGroupBase;
-  if (lastGroupCnt == 0) lastGroupCnt = _ecK - 1;
+  int lastGroupCnt = _packetCnt % (_ecN - 1), lastGroupBase;
+  if (lastGroupCnt == 0) lastGroupCnt = _ecN - 1;
   lastGroupBase = _packetCnt - lastGroupCnt;
 
   for (int i = 0; i < _packetCnt - 1; i ++) {
@@ -102,12 +103,12 @@ void RRDRWorker::sender(const string& filename, redisContext* rc) {
       unique_lock<mutex> lck(_toSenderMtx);
       _toSenderCV.wait(lck);
     }
-    if (_id != _ecK - 1 && i % (_ecK - 1) == _ecK - 2) {
+    if (_id != _ecN - 1 && i % (_ecN - 1) + _ecK - 1 == _id) {
       // to req
       rReply = (redisReply*)redisCommand(rc, 
           "RPUSH %s:%d %b", 
-          filename.c_str(), _id + i - _ecK + 2, _diskPkts[i], _packetSize);
-      cout << "sender(): to req " << i << " target idx " << _id + i - _ecK + 2 << endl;
+          filename.c_str(), _id + i, _diskPkts[i], _packetSize);
+      cout << "sender(): to req " << i << " target idx " << _id + i << endl;
       freeReplyObject(rReply);
     } else {
       // to next 
@@ -135,7 +136,7 @@ void RRDRWorker::sender(const string& filename, redisContext* rc) {
         "RPUSH %s:%d %b", 
         filename.c_str(), _id + lastGroupBase, 
         _diskPkts[_packetCnt - 1], _packetSize);
-    cout << "sender(): to req " << _packetCnt - 1 << " target idx " << _id + _packetCnt / (_ecK - 1) * (_ecK - 1) << endl;
+    cout << "sender(): to req " << _packetCnt - 1 << " target idx " << _id + _packetCnt / (_ecN - 1) * (_ecN - 1) << endl;
     freeReplyObject(rReply);
   } else {
     gettimeofday(&tv1, NULL);
@@ -151,7 +152,7 @@ void RRDRWorker::sender(const string& filename, redisContext* rc) {
 }
 
 void RRDRWorker::puller(const string& filename, redisContext* rc) {
-  int i, groupSize = _ecK - 1;
+  int i, groupSize = _ecN - 1;
   int retrieveCnt = _packetCnt;
   redisReply* rReply;
   struct timeval tv1;
@@ -200,7 +201,7 @@ void RRDRWorker::puller(const string& filename, redisContext* rc) {
 void RRDRWorker::reader(const string& filename) {
   string fullName = _conf -> _blkDir + '/' + filename;
   int fd = open(fullName.c_str(), O_RDONLY);
-  int groupSize = _ecK - 1, i, j, base = 0, readLen, readl;
+  int groupSize = _ecN - 1, i, j, base = 0, readLen, readl;
   int round = _packetCnt % groupSize == 0 ? _packetCnt / groupSize : _packetCnt / groupSize + 1;
 
   vector<int> pktIdx;
