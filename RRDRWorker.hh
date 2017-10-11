@@ -37,9 +37,9 @@ class RRDRWorker : public DRWorker {
     void nonRequestorCompletion(string&, redisContext*);
 
     // new interface
-    void reader(const string&);
     void puller(const string&, redisContext* rc);
     void sender(const string&, redisContext* rc);
+    void reader(const string&, redisContext* rc);
 
     /* OLD */
     void nonRequestorCompletion(string&, redisContext*, redisContext*);

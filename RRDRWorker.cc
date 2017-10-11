@@ -63,7 +63,7 @@ void RRDRWorker::doProcess() {
       _toSendCnt = 0;
       _readCnt = 0;
 
-      thread diskThread([=]{reader(localBlkName);});
+      thread diskThread([=]{reader(localBlkName, _selfCtx);});
       freeReplyObject(rReply);
 
 
@@ -207,7 +207,8 @@ void RRDRWorker::puller(const string& filename, redisContext* rc) {
   cout << "puller finished" << endl;
 }
 
-void RRDRWorker::reader(const string& filename) {
+void RRDRWorker::reader(const string& filename,  redisContext* rc) {
+  redisReply* rReply;
   string fullName = _conf -> _blkDir + '/' + filename;
   int fd = open(fullName.c_str(), O_RDONLY);
   int groupSize = _ecN - 1, i, j, base = 0, readLen, readl;
@@ -238,6 +239,14 @@ void RRDRWorker::reader(const string& filename) {
       }
     }
     RSUtil::multiply(_diskPkts[i], _coefficient, _packetSize);
+    /*if(((i -_id + _ecN - 1) % (_ecN - 1)) == _ecK-1) {
+      // to next 
+      rReply = (redisReply*)redisCommand(rc, 
+          "RPUSH tmp:%s:%d %b", 
+          filename.c_str(), i,_diskPkts[i], _packetSize);
+      freeReplyObject(rReply);
+    }
+	*/
     _readCnt ++;
     gettimeofday(&tv1, NULL);
     cout << tv1.tv_sec << "s" << tv1.tv_usec << "us" << "reader() read packet " << i << ", readCnt " << _readCnt << endl;
