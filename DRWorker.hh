@@ -71,7 +71,7 @@ class DRWorker {
     size_t _packetSize;
     int _id;
     int _ecK;
-    int _ecN = 5;
+    int _ecN;
     unsigned int _localIP;
 
     // we assume it is 1 in current implementation

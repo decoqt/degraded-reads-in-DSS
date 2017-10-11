@@ -110,6 +110,7 @@ void ECPipeInputStream::sendRequest(const string& lostFile){
     // TODO: error handling
     ;
   };
+   cout<<"begin collect  "<<endl;
   _readerThread = thread([=]{dataCollector();});
 
   /** 
@@ -211,20 +212,22 @@ bool ECPipeInputStream::sendToCoordinator() {
     }
   } else if (_conf -> _DRPolicy == "ecpipe" && _conf -> _ECPipePolicy == "crr") {
     unsigned int ip;
-    for (int i = 0; i < _conf -> _ecK - 1; i ++) {
+    for (int i = 0; i < _conf -> _ecN - 1; i ++) {
       redisAppendCommand(_coordinatorCtx, "BLPOP %s 0", _lostFileName.c_str());
     }
 
     redisGetReply(_coordinatorCtx, (void**)&rReply);
     freeReplyObject(rReply);
+    cout<<"append commamd "<<endl;
 
-
-    for (int i = 0; i < _conf -> _ecK - 1; i ++) {
+    for (int i = 0; i < _conf -> _ecN - 1; i ++) {
+      //cout<<"wait reply from coor "<<i<<endl;
       redisGetReply(_coordinatorCtx, (void**)&rReply);
       memcpy((char*)&ip, rReply -> element[1] -> str, 4);
-      _cyclPullCtx.push_back(findCtx(ip));
+      _RRPullCtx.push_back(findCtx(ip));
       freeReplyObject(rReply);
     }
+    cout<<"wait reply "<<endl;
   }
   
   return true;
@@ -241,6 +244,29 @@ void ECPipeInputStream::dataCollector() {
 }
 
 void ECPipeInputStream::RRCollector() {
+  redisReply* rReply;
+  const char* filename = _lostFileName.c_str();
+  int ecN = _conf -> _ecN;
+  struct timeval tv1, tv2, tv3;
+   cout << "collect packet " << ecN << endl;
+//  vector<redisReply*> toFree;
+  for (int i = 0; i < _packetCnt; i ++) {
+    redisAppendCommand(_RRPullCtx[i % (ecN - 1)], "BLPOP %s:%d 0", filename, i);
+  }
+  gettimeofday(&tv1, NULL);
+  for (int i = 0; i < _packetCnt; i ++) {
+    redisGetReply(_RRPullCtx[i % (ecN - 1)], (void**)&rReply);
+    _contents[i] = (char*)malloc(sizeof(char) * _packetSize);
+    //cout << "getting packet " << i << endl;
+    memcpy(_contents[i], rReply -> element[1] -> str, _packetSize);
+
+    _completePacketIndex ++;
+
+    freeReplyObject(rReply);
+    //toFree.push_back(rReply);
+  }
+  gettimeofday(&tv2, NULL);
+  cout << "fetch rr time: " << ((tv2.tv_sec - tv1.tv_sec) * 1000000.0 + tv2.tv_usec - tv1.tv_usec) / 1000000.0 << endl;
 }
 
 void ECPipeInputStream::cyclCollector() {

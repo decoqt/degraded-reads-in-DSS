@@ -6,7 +6,7 @@ void RRDRWorker::doProcess() {
   const char* cmd;
   unsigned int lostBlkNameLen, localBlkNameLen;
   struct timeval tv1, tv2;
-
+  _ecK = 3;
   while (true) {
     // loop FOREVER
     cout << "waiting for cmds" << endl;
@@ -34,12 +34,12 @@ void RRDRWorker::doProcess() {
        * g: corresponding filename in local start pos ?, ? + 4
        */
       cmd = rReply -> element[1] -> str;
-      memcpy((char*)&_ecK, cmd, 4);
+      memcpy((char*)&_ecN, cmd, 4);
       memcpy((char*)&requestorIP, cmd + 4, 4);
       memcpy((char*)&prevIP, cmd + 8, 4);
       memcpy((char*)&nextIP, cmd + 12, 4);
       memcpy((char*)&_id, cmd + 16, 4);
-
+      _ecN+=1;
       // get file names
       memcpy((char*)&lostBlkNameLen, cmd + 20, 4);
 
@@ -54,7 +54,7 @@ void RRDRWorker::doProcess() {
         cout << "lostBlkName: " << lostBlkName << endl
           << " localBlkName: " << localBlkName << endl
           << " id: " << _id  << endl
-          << " ecK: " << _ecK << endl
+          << " ecN: " << _ecN << endl
           << " requestorIP: " << ip2Str(requestorIP) << endl
           << " prevIP: " << ip2Str(prevIP) << endl
           << " nextIP: " << ip2Str(nextIP) << endl;
@@ -97,32 +97,33 @@ void RRDRWorker::sender(const string& filename, redisContext* rc) {
   if (lastGroupCnt == 0) lastGroupCnt = _ecN - 1;
   lastGroupBase = _packetCnt - lastGroupCnt;
 
-  for (int i = 0; i < _packetCnt - 1; i ++) {
+  for (int i = 0; i < _packetCnt; i ++) {
     while (i >= _toSendCnt) {
       cout << "sender(): i = " << i << ", _toSendCnt = " << _toSendCnt << endl;
       unique_lock<mutex> lck(_toSenderMtx);
       _toSenderCV.wait(lck);
     }
-    if (_id != _ecN - 1 && i % (_ecN - 1) + _ecK - 1 == _id) {
+    cout << "sender(): after mutes" << endl;
+    if (_id != _ecN - 1 && ((i) % (_ecN - 1))  == _id) {
       // to req
       rReply = (redisReply*)redisCommand(rc, 
           "RPUSH %s:%d %b", 
-          filename.c_str(), _id + i, _diskPkts[i], _packetSize);
-      cout << "sender(): to req " << i << " target idx " << _id + i << endl;
+          filename.c_str(), i, _diskPkts[i], _packetSize);
+      cout << "sender(): to req " << i << " target idx " << i  << endl;
       freeReplyObject(rReply);
-    } else {
+    } else if(((i -_id + _ecN - 1) % (_ecN - 1)) < _ecK) {
       // to next 
       gettimeofday(&tv1, NULL);
       cout << tv1.tv_sec << "s" << tv1.tv_usec << "us, sender(): before sending to next " << i << endl;
       rReply = (redisReply*)redisCommand(rc, 
-          "RPUSH tmp:%s %b", 
-          filename.c_str(), _diskPkts[i], _packetSize);
+          "RPUSH tmp:%s:%d %b", 
+          filename.c_str(), i,_diskPkts[i], _packetSize);
       freeReplyObject(rReply);
       gettimeofday(&tv2, NULL);
       cout << "send duration: " << ((tv2.tv_sec - tv1.tv_sec) * 1000000.0 + tv2.tv_usec - tv1.tv_usec) / 1000000 << endl;
     }
   }
-
+/*
   cout << "sender(): to deal with last packet" << endl;
   while (_packetCnt - 1 >= _toSendCnt) {
     unique_lock<mutex> lck(_toSenderMtx);
@@ -142,13 +143,14 @@ void RRDRWorker::sender(const string& filename, redisContext* rc) {
     gettimeofday(&tv1, NULL);
     cout << tv1.tv_sec << "s" << tv1.tv_usec << "us, sender(): before sending to next " << endl;
     rReply = (redisReply*)redisCommand(rc, 
-        "RPUSH tmp:%s %b", 
+        "RPUSH tmp:%s:%d %b", 
         filename.c_str(), 
-        _diskPkts[_packetCnt - 1], _packetSize);
+        _diskPkts[_packetCnt - 1], _packetCnt-1,_packetSize);
     freeReplyObject(rReply);
     gettimeofday(&tv2, NULL);
     cout << "send duration: " << ((tv2.tv_sec - tv1.tv_sec) * 1000000.0 + tv2.tv_usec - tv1.tv_usec) / 1000000 << endl;
   }
+*/
 }
 
 void RRDRWorker::puller(const string& filename, redisContext* rc) {
@@ -157,19 +159,23 @@ void RRDRWorker::puller(const string& filename, redisContext* rc) {
   redisReply* rReply;
   struct timeval tv1;
 
-  if (_id != 0) {
-    retrieveCnt -= _packetCnt / groupSize; 
-    if (_id <= _packetCnt % groupSize) retrieveCnt --;
-  }
+  //if (_id != 0) {
+  //  retrieveCnt -= _packetCnt / groupSize; 
+  //  if (_id <= _packetCnt % groupSize) retrieveCnt --;
+  //}
 
-  //cout << "puller() start, retrieveCnt = " << retrieveCnt << endl;
+  cout << "puller() start " << endl;
 
-  for (int i = 0; i < retrieveCnt; i ++) {
-    redisAppendCommand(rc, "BLPOP tmp:%s 0", filename.c_str());
+  for (int i = 0; i < _packetCnt; i ++) {
+    if (((i-_id + groupSize) % groupSize) < _ecK -1) {
+    	redisAppendCommand(rc, "BLPOP tmp:%s:%d 0", filename.c_str(),i);
+    }
   }
+  cout << "puller() send command " << endl;
 
   for (i = 0; i < _packetCnt; i ++) {
-    if (_id == 0 || (i % groupSize) != 0) {
+    if (((i-_id + groupSize) % groupSize) < _ecK - 1 ) {
+  	cout << "puller() wait previous results " <<i<<" and " <<_id<<" and " <<(i-_id)%groupSize<<endl;
       redisGetReply(rc, (void**)&rReply);
     }
     gettimeofday(&tv1, NULL);
@@ -181,17 +187,20 @@ void RRDRWorker::puller(const string& filename, redisContext* rc) {
       _toPullerCV.wait(lck);
     }
     //cout << "puller(): get read packet " << i << endl;
-    if (_id == 0 || (i % groupSize) != 0) {
+    //if (_id == 0 || (i % groupSize) != 0) {
       //cout << "puller(): before computing " << rReply -> elements << endl;
       //cout << "puller(): before computing " << rReply -> element[1] -> len << endl;
+    if (((i-_id + groupSize) % groupSize) < _ecK - 1) {
+      cout << "puller(): before computing " << rReply -> elements << endl;
       Computation::XORBuffers(_diskPkts[i], rReply -> element[1] -> str, _packetSize);
       //cout << "puller(): after computing " << endl;
     }
 
+
     _toSendCnt ++;
     unique_lock<mutex> lck(_toSenderMtx);
     _toSenderCV.notify_one();
-    if (_id == 0 || (i % groupSize) != 0) {
+    if (((i-_id + groupSize) % groupSize) < _ecK - 1) {
       freeReplyObject(rReply);
     }
   }
@@ -212,7 +221,7 @@ void RRDRWorker::reader(const string& filename) {
 
   for (i = 0; i < round; i ++) {
     for (j = _id - 1; j >= 0; j --) if (base + j < _packetCnt) pktIdx.push_back(base + j);
-    for (j = groupSize - 1; j >= _id; j --) if (base + j < _packetCnt) pktIdx.push_back(base + j); 
+    for (j = groupSize - 1; j >= 0; j --) if (base + j < _packetCnt) pktIdx.push_back(base + j); 
     base += groupSize;
   }
 
@@ -235,6 +244,7 @@ void RRDRWorker::reader(const string& filename) {
     unique_lock<mutex> lck(_toPullerMtx);
     _toPullerCV.notify_one();
   }
+  cout<<"reader over "<<endl;
 }
 
 

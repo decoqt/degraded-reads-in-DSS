@@ -26,13 +26,8 @@ int main(int argc, char** argv) {
     coord = new ConvCoordinator(conf);
   } else if (conf -> _DRPolicy == "ecpipe") {
     cout << "ECCoordinator: starting ECPipe coordinator" << conf->_ECPipePolicy<< endl;
-    if (conf -> _ECPipePolicy == "cyclic") {
-	coord = new CyclCoordinator(conf);
-    	cout << "PipeCoordinator: starting cycle coordinator" << endl;
-    } else {
-	coord = new PipeCoordinator(conf);
-    	cout << "PipeCoordinator: starting Pipe coordinator" << endl;
-    }
+    coord = new PipeCoordinator(conf);
+    cout << "PipeCoordinator: starting Pipe coordinator" << endl;
   } 
   coord -> doProcess();
   return 0;

@@ -230,10 +230,10 @@ void PipeCoordinator::requestHandler() {
 //        freeReplyObject(rReply);
       } else if (_conf -> _ECPipePolicy == "crr") {
 	cout<<"RR to do "<<endl;
-        for (int i = 0; i < stripe.size() - 1; i ++) {
+        for (int i = 0; i < stripe.size(); i ++) {
           redisAppendCommand(_selfCtx, "RPUSH %s %b", filename.c_str(), &(stripe[i].first), 4);
         }
-        for (int i = 0; i < stripe.size() - 1; i ++) {
+        for (int i = 0; i < stripe.size(); i ++) {
           redisGetReply(_selfCtx, (void**)&rReply);
 //          freeReplyObject(rReply);
         }
